@@ -1,0 +1,7 @@
+*.keras binary
+*.png binary
+*.jpg binary
+*.ipynb text eol=lf
+*.md text eol=lf
+*.py text eol=lf
+*.json text eol=lf

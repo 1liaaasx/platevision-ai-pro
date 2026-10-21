@@ -1,0 +1,17 @@
+{
+  "model": "PlateVision CNN V2",
+  "dataset": "Synthetic alphanumeric characters",
+  "num_classes": 36,
+  "image_size": [
+    32,
+    32
+  ],
+  "test_samples": 5188,
+  "accuracy_v1": 0.5736314654350281,
+  "accuracy_v2": 0.8064764738082886,
+  "test_loss_v2": 1.0573904514312744,
+  "limitations": [
+    "Synthetic data only",
+    "No real-world license plate evaluation yet"
+  ]
+}

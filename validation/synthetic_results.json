@@ -1,0 +1,163 @@
+[
+  {
+    "scenario": "cropped",
+    "reference": "AB1234",
+    "status": "ready",
+    "segmented": 6,
+    "observed_cnn": "ABI2S4",
+    "differences": [
+      {
+        "position": 3,
+        "reference": "1",
+        "observed": "I"
+      },
+      {
+        "position": 5,
+        "reference": "3",
+        "observed": "S"
+      }
+    ],
+    "candidate_score": null
+  },
+  {
+    "scenario": "vehicle",
+    "reference": "AB1234",
+    "status": "ready",
+    "segmented": 6,
+    "observed_cnn": "AP72Z4",
+    "differences": [
+      {
+        "position": 2,
+        "reference": "B",
+        "observed": "P"
+      },
+      {
+        "position": 3,
+        "reference": "1",
+        "observed": "7"
+      },
+      {
+        "position": 5,
+        "reference": "3",
+        "observed": "Z"
+      }
+    ],
+    "candidate_score": 0.8794
+  },
+  {
+    "scenario": "cropped",
+    "reference": "123ABC",
+    "status": "ready",
+    "segmented": 6,
+    "observed_cnn": "423ABQ",
+    "differences": [
+      {
+        "position": 1,
+        "reference": "1",
+        "observed": "4"
+      },
+      {
+        "position": 6,
+        "reference": "C",
+        "observed": "Q"
+      }
+    ],
+    "candidate_score": null
+  },
+  {
+    "scenario": "vehicle",
+    "reference": "123ABC",
+    "status": "ready",
+    "segmented": 6,
+    "observed_cnn": "I2SAPQ",
+    "differences": [
+      {
+        "position": 1,
+        "reference": "1",
+        "observed": "I"
+      },
+      {
+        "position": 3,
+        "reference": "3",
+        "observed": "S"
+      },
+      {
+        "position": 5,
+        "reference": "B",
+        "observed": "P"
+      },
+      {
+        "position": 6,
+        "reference": "C",
+        "observed": "Q"
+      }
+    ],
+    "candidate_score": 0.8794
+  },
+  {
+    "scenario": "cropped",
+    "reference": "XY7890",
+    "status": "ready",
+    "segmented": 6,
+    "observed_cnn": "XY7690",
+    "differences": [
+      {
+        "position": 4,
+        "reference": "8",
+        "observed": "6"
+      }
+    ],
+    "candidate_score": null
+  },
+  {
+    "scenario": "vehicle",
+    "reference": "XY7890",
+    "status": "ready",
+    "segmented": 6,
+    "observed_cnn": "XY7690",
+    "differences": [
+      {
+        "position": 4,
+        "reference": "8",
+        "observed": "6"
+      }
+    ],
+    "candidate_score": 0.8794
+  },
+  {
+    "scenario": "cropped",
+    "reference": "456DEF",
+    "status": "ready",
+    "segmented": 6,
+    "observed_cnn": "456DEF",
+    "differences": [],
+    "candidate_score": null
+  },
+  {
+    "scenario": "vehicle",
+    "reference": "456DEF",
+    "status": "ready",
+    "segmented": 6,
+    "observed_cnn": "456DEF",
+    "differences": [],
+    "candidate_score": 0.8794
+  },
+  {
+    "scenario": "training_chart_photo",
+    "reference": null,
+    "status": "no_candidate",
+    "segmented": 0,
+    "observed_cnn": null,
+    "differences": [],
+    "candidate_score": null
+  },
+  {
+    "scenario": "training_chart_cropped",
+    "reference": null,
+    "status": "unusable",
+    "segmented": 0,
+    "observed_cnn": null,
+    "differences": [],
+    "candidate_score": null
+  }
+]
