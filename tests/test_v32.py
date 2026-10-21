@@ -114,7 +114,7 @@ def test_streamlit_v31_simple_and_three_engine_comparison(monkeypatch):
     assert not app.exception
     assert any("CNN V3.1" in caption.value for caption in app.caption)
     assert any(header.value for header in app.header)
-    app.radio(key="space").set_value("Comparaison IA").run()
+    app.segmented_control(key="space").set_value("Comparaison IA").run()
     next(radio for radio in app.radio if radio.label == "Type d'image").set_value(
         "Plaque déjà recadrée").run()
     app.text_input[0].set_value("456DEF").run()
@@ -142,7 +142,7 @@ def test_streamlit_missing_v31_keeps_v2_available(monkeypatch):
     app = AppTest.from_file(str(ROOT / "app.py"), default_timeout=60).run()
     next(radio for radio in app.radio if radio.label == "Type d'image").set_value(
         "Plaque déjà recadrée").run()
-    app.radio(key="space").set_value("Comparaison IA").run()
+    app.segmented_control(key="space").set_value("Comparaison IA").run()
     next(radio for radio in app.radio if radio.label == "Type d'image").set_value(
         "Plaque déjà recadrée").run()
     app.multiselect[0].set_value(["CNN V2", "CNN V3.1"]).run()

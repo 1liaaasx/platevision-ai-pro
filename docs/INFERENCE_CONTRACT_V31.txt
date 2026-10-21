@@ -1,6 +1,0 @@
-PlateVision CNN V3.1 — CLASSIFICATION de caractères isolés (pas de détection de plaque).
-Entrée: (batch,32,32,1) en float32, plage [0,1].
-Prétraitement: grayscale uint8, resize 32x32, puis 1.0 - image/255.0; glyphe clair sur fond sombre.
-Classes: 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ (indices 0 à 35).
-Augmentations actives uniquement lors du fit(), pas lors de predict().
-Scores softmax NON calibrés. Validation synthétique Lato, pas de preuve d’efficacité réelle.

@@ -1,4 +1,4 @@
-"""Release regressions for input normalization, exports and benchmark math."""
+"""Release regressions for input normalization and exports."""
 
 import json
 from io import BytesIO
@@ -8,7 +8,6 @@ import numpy as np
 import pytest
 from PIL import Image
 
-from scripts.benchmark_real import bbox_iou, edit_distance, validate_annotations
 from src.detection import PlateCandidate
 from src.exports import annotated_png, result_csv, result_json
 from src.pipeline import Analysis
@@ -63,12 +62,3 @@ def test_export_is_observation_not_claim_of_success():
     encoded = annotated_png(result)
     assert encoded[:8] == b"\x89PNG\r\n\x1a\n"
     assert cv2.imdecode(np.frombuffer(encoded, np.uint8), cv2.IMREAD_COLOR).shape == source.shape
-
-
-def test_benchmark_math_and_empty_dataset_guard(tmp_path):
-    assert bbox_iou([0, 0, 10, 10], [0, 0, 10, 10]) == 1
-    assert bbox_iou([0, 0, 10, 10], [20, 20, 30, 30]) == 0
-    assert edit_distance("ABC123", "ABC123") == 0
-    assert edit_distance("AXC12B", "ABC123") == 2
-    with pytest.raises(ValueError, match="vides"):
-        validate_annotations({"images": []}, tmp_path)

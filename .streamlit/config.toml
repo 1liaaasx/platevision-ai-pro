@@ -1,14 +1,27 @@
 [theme]
 base = "light"
-primaryColor = "#0D7665"
-backgroundColor = "#F7F9FC"
+backgroundColor = "#F7F6FC"
 secondaryBackgroundColor = "#FFFFFF"
-textColor = "#162731"
-font = "sans serif"
+textColor = "#201C3B"
+borderColor = "#E8E5F2"
+primaryColor = "#6246D8"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+headingFont = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap"
+baseRadius = "16px"
+buttonRadius = "12px"
+headingFontSizes = ["34px", "25px", "21px", "18px", "15px", "13px"]
+paddingTop = "1rem"
+paddingBottom = "2rem"
+showSidebarBorder = false
 
 [theme.sidebar]
-backgroundColor = "#EAF2F1"
-textColor = "#162731"
+backgroundColor = "#251B61"
+secondaryBackgroundColor = "#312574"
+textColor = "#FFFFFF"
+primaryColor = "#A58BF5"
+borderColor = "#493B84"
+linkColor = "#C9BAFF"
+paddingTop = "1rem"
 
 [server]
 maxUploadSize = 15

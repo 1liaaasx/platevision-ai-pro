@@ -66,27 +66,25 @@ def heading(kicker: str, title: str, description: str):
     st.write(description)
 
 
+def image_preview(image, caption: str, alt: str, max_width: int = 640,
+                  scale: int = 1, clamp: bool = False):
+    """Keep previews centered and bounded without changing their aspect ratio."""
+    width = min(max_width, int(image.shape[1]) * scale)
+    with st.container(horizontal_alignment="center"):
+        st.image(image, caption=caption, alt=alt, width=width, clamp=clamp)
+
+
 def recognition_page(comparison: bool = False):
     heading("Comparaison IA" if comparison else "Analyse de plaque",
             "Comparer les trois moteurs" if comparison else "Lire une plaque",
             "Examinez séparément la détection, les caractères et les lectures proposées."
             if comparison else "Importez une photo, vérifiez la région détectée et explorez la lecture proposée.")
     with st.container(border=True):
-        st.subheader("01 · Image source")
+        st.subheader("Image à analyser")
         upload = st.file_uploader("Déposer une image JPG ou PNG", type=["jpg", "jpeg", "png"],
                                   help="15 Mo et 20 millions de pixels maximum.")
         if upload is None:
             st.info("Choisissez une image pour commencer.")
-            steps = st.columns(3, gap="medium")
-            for col, title, description in zip(
-                steps,
-                ("Photo", "Région", "Lecture"),
-                ("Importez un véhicule ou une plaque.", "Détectez ou recadrez la plaque.", "Examinez les caractères et le CNN."),
-            ):
-                with col:
-                    with st.container(border=True):
-                        st.markdown(f"**{title}**")
-                        st.caption(description)
             return
         try:
             content = upload.getvalue()
@@ -94,18 +92,20 @@ def recognition_page(comparison: bool = False):
         except ValueError as exc:
             st.error(str(exc), icon="🚫")
             return
-        st.image(image, caption=f"Aperçu de l'image importée · {image.shape[1]} × {image.shape[0]} px",
-                 alt="Aperçu de l'image source", width="stretch")
+        image_preview(image, f"Image importée · {image.shape[1]} × {image.shape[0]} px",
+                      "Photographie ou plaque importée", max_width=620)
     with st.container(border=True):
-        st.subheader("02 · Réglages")
-        image_type = st.radio("Type d'image", ["Photo de véhicule", "Plaque déjà recadrée"],
-                              horizontal=True, help="Une image de courbes ou un document n'est pas une plaque.")
-        if image_type == "Photo de véhicule":
-            method = st.radio("Méthode de sélection", ["Détection automatique", "Recadrage manuel"],
-                              horizontal=True)
-            mode = "photo" if method == "Détection automatique" else "manual"
-        else:
-            mode = "cropped"
+        st.subheader("Réglages de l’analyse")
+        type_col, method_col = st.columns(2, gap="medium")
+        with type_col:
+            image_type = st.radio("Type d'image", ["Photo de véhicule", "Plaque déjà recadrée"],
+                                  help="Une image de courbes ou un document n'est pas une plaque.")
+        with method_col:
+            if image_type == "Photo de véhicule":
+                method = st.radio("Méthode de sélection", ["Détection automatique", "Recadrage manuel"])
+                mode = "photo" if method == "Détection automatique" else "manual"
+            else:
+                mode = "cropped"
         crop_coords = None
         if mode == "manual":
             height, width = image.shape[:2]
@@ -114,13 +114,8 @@ def recognition_page(comparison: bool = False):
             top, bottom = st.slider("Limites verticales (px)", 0, height, (0, height))
             crop_coords = (left, top, right, bottom)
             if left < right and top < bottom:
-                st.image(image[top:bottom, left:right], caption="Aperçu du recadrage manuel",
-                         alt="Aperçu de la région sélectionnée", width="stretch")
-        polarity = st.selectbox("Polarité des caractères",
-                                ["auto", "dark-on-light", "light-on-dark"],
-                                format_func=lambda value: {"auto": "Automatique",
-                                                           "dark-on-light": "Foncés sur fond clair",
-                                                           "light-on-dark": "Clairs sur fond sombre"}[value])
+                image_preview(image[top:bottom, left:right], "Aperçu du recadrage manuel",
+                              "Région sélectionnée manuellement", max_width=420)
         view_mode = "Comparaison" if comparison else "Simple"
         engine_names = ["CNN V2", "CNN V3.1", "EasyOCR"]
         if view_mode == "Simple":
@@ -134,24 +129,27 @@ def recognition_page(comparison: bool = False):
         if v31_state != "ready":
             st.caption(f"CNN V3.1 indisponible ({v31_state}) ; les autres moteurs restent utilisables.")
         ocr_state = availability()
-        use_ocr = (st.checkbox("Comparer avec EasyOCR", value=False,
-                               disabled=ocr_state != "ready",
-                               help="La comparaison nécessite les modèles CRAFT et English G2.")
-                   if view_mode == "Simple" and primary != "EasyOCR" else False)
-        if ocr_state == "package_missing":
-            st.caption("EasyOCR n'est pas installé ; la lecture CNN reste disponible.")
-        elif ocr_state == "weights_missing":
-            st.caption("Poids EasyOCR absents. Exécutez python -m scripts.download_easyocr, puis rechargez l'application.")
-        elif ocr_state == "weights_invalid":
-            st.caption("Poids EasyOCR incomplets ou invalides. Relancez python -m scripts.download_easyocr.")
-        reference = "".join(ch for ch in st.text_input(
-            "Référence connue (facultative)",
-            help="Exemple synthétique : 456DEF. Sert uniquement à comparer la lecture obtenue.",
-        ).upper() if ch.isalnum())
-        if reference:
-            st.caption(f"Référence normalisée : {reference}")
+        with st.expander("Options complémentaires · polarité et référence"):
+            polarity = st.selectbox("Polarité des caractères",
+                                    ["auto", "dark-on-light", "light-on-dark"],
+                                    format_func=lambda value: {"auto": "Automatique",
+                                                               "dark-on-light": "Foncés sur fond clair",
+                                                               "light-on-dark": "Clairs sur fond sombre"}[value])
+            use_ocr = (st.checkbox("Comparer avec EasyOCR", value=False,
+                                   disabled=ocr_state != "ready",
+                                   help="La comparaison nécessite les modèles CRAFT et English G2.")
+                       if view_mode == "Simple" and primary != "EasyOCR" else False)
+            reference = "".join(ch for ch in st.text_input(
+                "Référence connue (facultative)",
+                help="Exemple : J389NLT. Sert uniquement à comparer la lecture obtenue.",
+            ).upper() if ch.isalnum())
+            if reference:
+                st.caption(f"Référence normalisée : {reference}")
         selected = ([primary] + (["EasyOCR"] if use_ocr and primary != "EasyOCR" else [])
                     if view_mode == "Simple" else selected_comparison)
+        if ocr_state != "ready" and "EasyOCR" in selected:
+            st.info("EasyOCR · Indisponible. Installez requirements-ocr.txt puis lancez "
+                    "python -m scripts.download_easyocr avant de recharger la page.")
         signature = hashlib.sha256(content + repr((mode, crop_coords, polarity,
                                                     view_mode, tuple(selected))).encode()).hexdigest()
         if st.button("Lancer l'analyse", type="primary", icon="🔎", width="stretch"):
@@ -170,6 +168,11 @@ def recognition_page(comparison: bool = False):
                     engine_results = {}
                     if analysis.status == "ready":
                         for name in selected:
+                            if name == "EasyOCR" and ocr_state != "ready":
+                                engine_results[name] = {"error": "Indisponible",
+                                                        "availability": ocr_state,
+                                                        "elapsed_ms": None}
+                                continue
                             st.write(f"Reconnaissance {name}")
                             engine_started = perf_counter()
                             try:
@@ -200,7 +203,7 @@ def recognition_page(comparison: bool = False):
                 st.error(f"Analyse impossible : {exc}", icon="🚫")
     result = st.session_state.get("analysis")
     if result and result["signature"] == signature:
-        st.subheader("03 · Résultat")
+        st.subheader("Résultat de l’analyse")
         show_analysis(result, reference)
         st.caption(f"Détection et segmentation : {result['pipeline_elapsed_ms']:.2f} ms · "
                    "Première lecture = chargement éventuel du moteur inclus.")
@@ -235,9 +238,10 @@ def model_page():
         st.caption(f"{data['test_samples']:,} images de test · {data['image_size'][0]} × {data['image_size'][1]} pixels · perte de test V2 {data['test_loss_v2']:.4f}")
         if CHART_PATH.exists():
             st.image(str(CHART_PATH), caption="Courbes d'entraînement fournies",
-                     alt="Accuracy et perte du CNN V2 en entraînement et validation", width="stretch")
+                     alt="Accuracy et perte du CNN V2 en entraînement et validation", width=760)
         with st.expander("Architecture réelle du CNN V2"):
-            st.dataframe([{"Couche": name, "Filtres ou unités": size} for name, size in model_architecture()],
+            st.dataframe([{"Couche": name, "Filtres ou unités": str(size)}
+                          for name, size in model_architecture()],
                          hide_index=True, alt="Couches lues dans le fichier Keras fourni")
         if V31_METRICS_PATH.is_file():
             v31 = json.loads(V31_METRICS_PATH.read_text(encoding="utf-8"))
@@ -253,7 +257,7 @@ def model_page():
             st.caption("Ces chiffres proviennent de la validation synthétique Lato de V3.1. Le test final DejaVu est réservé. Ils ne sont pas directement comparables au test historique V2.")
             if V31_CHART_PATH.is_file():
                 st.image(str(V31_CHART_PATH), caption="Courbes d'entraînement V3.1 fournies",
-                         alt="Accuracy et perte V3.1 en entraînement et validation", width="stretch")
+                         alt="Accuracy et perte V3.1 en entraînement et validation", width=760)
         st.info("Aucune accuracy de détection, de segmentation ou de lecture de plaques réelles n'est disponible.")
     except (OSError, KeyError, ValueError, zipfile.BadZipFile) as exc:
         st.error(f"Artefacts d'analyse indisponibles : {exc}")
@@ -279,16 +283,23 @@ def pipeline_page():
             if result is None:
                 st.caption("Lancez une analyse dans l'espace Reconnaissance pour afficher une image à cette étape.")
             elif i == 0:
-                st.image(result["source"], alt="Image initiale", width="stretch")
+                image_preview(result["source"], "Image initiale", "Image importée", max_width=640)
             elif i == 1 and analysis.candidate is not None:
-                st.image(draw_candidate(result["source"], analysis.candidate), alt="Région candidate", width="stretch")
+                image_preview(draw_candidate(result["source"], analysis.candidate),
+                              "Région candidate", "Plaque localisée dans l'image", max_width=640)
             elif i == 2 and analysis.plate is not None:
-                st.image(analysis.plate, alt="Région recadrée", width="stretch")
+                image_preview(analysis.plate, "Région recadrée", "Plaque extraite",
+                              max_width=420, scale=2)
             elif i == 3 and analysis.plate is not None:
-                st.image(enhance_plate(analysis.plate), alt="Contraste amélioré", width="stretch", clamp=True)
+                image_preview(enhance_plate(analysis.plate), "Contraste amélioré",
+                              "Plaque après amélioration du contraste", max_width=420, scale=2,
+                              clamp=True)
             elif i == 4 and analysis.segmentation is not None:
-                st.image(analysis.segmentation.binary, alt="Masque binaire", width="stretch", clamp=True)
-                st.image(draw_boxes(analysis.plate, analysis.segmentation.boxes), alt="Composantes retenues", width="stretch")
+                image_preview(analysis.segmentation.binary, "Masque binaire",
+                              "Masque des caractères", max_width=420, scale=2, clamp=True)
+                image_preview(draw_boxes(analysis.plate, analysis.segmentation.boxes),
+                              "Composantes retenues", "Boîtes des caractères", max_width=420,
+                              scale=2)
             elif i == 5 and analysis.status == "ready":
                 for name, item in result.get("engines", {}).items():
                     if item.get("text"):
@@ -301,31 +312,34 @@ def pipeline_page():
 
 def about_page():
     heading("Le projet", "À propos de PlateVision",
-            "Une démonstration de reconnaissance de caractères de plaques pour un portfolio de Deep Learning.")
-    left, right = st.columns(2, gap="large")
-    with left:
-        with st.container(border=True):
-            st.subheader("Objectif et architecture")
-            st.write("Une photo ou un recadrage traverse la détection OpenCV puis la segmentation. Les CNN V2 et V3.1 classent les caractères avec des préparations distinctes ; EasyOCR lit la région brute sur CPU.")
-            st.write("Le modèle et les résultats expérimentaux proviennent des artefacts fournis. Aucun réentraînement n'est effectué par cette application.")
-    with right:
-        with st.container(border=True):
-            st.subheader("Résultats et limites")
-            st.write("CNN V1 : 57,36 % ; CNN V2 : 80,65 % sur le test synthétique historique. V3.1 : 98,17 % en validation synthétique Lato. Ces protocoles ne sont pas directement comparables.")
-            st.write("La détection est heuristique, le filtrage suppose une ligne horizontale et la segmentation peut échouer avec flou, reflets, bordures ou caractères accolés.")
-    with st.expander("Pistes de recherche"):
-        st.write("Évaluer un jeu de plaques réelles annotées, mesurer séparément détection et lecture, puis étudier un détecteur entraîné et une calibration des sorties CNN.")
+            "Mini-projet académique de lecture expérimentale de plaques, exécuté localement.")
+    with st.container(border=True):
+        st.subheader("Parcours d'une image")
+        st.write("Image → détection OpenCV ou recadrage manuel → segmentation → CNN V2 / CNN V3.1")
+        st.caption("EasyOCR lit indépendamment la plaque extraite. Aucun moteur n'utilise la référence pour prédire.")
+    left, right = st.columns(2, gap="medium")
+    with left, st.container(border=True, height="stretch"):
+        st.subheader("Technologies")
+        st.write("Python · Streamlit · OpenCV · TensorFlow/Keras · EasyOCR")
+        st.caption("Deux CNN de caractères isolés ; EasyOCR facultatif sur CPU.")
+    with right, st.container(border=True, height="stretch"):
+        st.subheader("Mesures et limites")
+        st.write("V2 : 80,65 % sur le test synthétique historique. V3.1 : 98,17 % en validation synthétique Lato.")
+        st.caption("Protocoles différents. La lecture de plaques réelles n'a pas de taux de réussite établi.")
+    st.caption("Flou, reflets, faible résolution et segmentation imparfaite peuvent dégrader la lecture.")
 
 
 with st.sidebar:
-    st.title("PlateVision")
-    st.caption("AI PRO · RELEASE 1.0")
-    st.divider()
-    space = st.radio("Navigation", ["Analyse de plaque", "Comparaison IA", "À propos du projet"],
-                     key="space")
-    st.divider()
-    st.caption("Traitement sur CPU · V2, V3.1 et EasyOCR")
-    st.caption("Une lecture n'est jamais une vérification d'identité.")
+    st.subheader("PlateVision")
+    st.caption("AI PRO  ·  PROJET CNN")
+    space = st.segmented_control(
+        "Navigation", ["Analyse de plaque", "Comparaison IA", "À propos du projet"],
+        default="Analyse de plaque", required=True, key="space", width="stretch",
+        format_func=lambda value: {"Analyse de plaque": "Lire",
+                                   "Comparaison IA": "Comparer",
+                                   "À propos du projet": "Projet"}[value],
+        label_visibility="collapsed")
+    st.caption("Analyse locale · V2 · V3.1 · EasyOCR")
 
 if space == "Analyse de plaque":
     recognition_page()

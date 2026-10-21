@@ -10,18 +10,8 @@ htmlcov/
 .DS_Store
 Thumbs.db
 images.jpg
-benchmark_real/images/*
-!benchmark_real/images/.gitkeep
-benchmark_real/annotations.json
-benchmark_real/report.json
-validation/real_image/*.png
-validation/real_image/
-validation/v32_results.json
-validation/streamlit_v32_results.json
-validation/release_profile.json
-validation/release_robustness.json
-validation/release_zip_verification.json
-validation/ui_real_final.png
+L= \[1 ,2 ,3\].py
+validation/
 delivery/
 *.zip
 reproduction_outputs/

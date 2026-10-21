@@ -8,10 +8,17 @@ from .ocr import prepare_ocr_image
 from .segmentation import draw_boxes
 
 
+def _bounded_image(image, caption: str, alt: str, max_width: int = 420,
+                   scale: int = 2) -> None:
+    width = min(max_width, int(image.shape[1]) * scale)
+    with st.container(horizontal_alignment="center"):
+        st.image(image, caption=caption, alt=alt, width=width)
+
+
 def _reference_result(name: str, text: str, reference: str) -> None:
     check = reference_check(text, reference)
     if check is None:
-        st.caption("Aucune référence : lecture non vérifiée.")
+        st.caption("STATUT · NON VÉRIFIÉE · Aucune référence fiable fournie.")
     elif check["exact"]:
         st.success(f"{name} : lecture exacte selon la référence fournie ({reference}). Concordance vérifiée.")
         st.caption(f"{check['correct_positions']}/{check['reference_length']} caractères à la bonne position.")
@@ -37,12 +44,12 @@ def show_analysis(result: dict, reference: str = "") -> None:
         st.warning(analysis.message, icon="⚠️")
         if analysis.plate is not None:
             with st.expander("Examiner la région sélectionnée"):
-                st.image(analysis.plate, caption="Région examinée", width="stretch",
-                         alt="Région sélectionnée qui n'a pas pu être lue")
+                _bounded_image(analysis.plate, "Région examinée",
+                               "Région sélectionnée qui n'a pas pu être lue")
                 if analysis.segmentation is not None:
-                    st.image(draw_boxes(analysis.plate, analysis.segmentation.boxes),
-                             caption="Composantes retenues avant validation", width="stretch",
-                             alt="Composantes extraites avant échec de validation")
+                    _bounded_image(draw_boxes(analysis.plate, analysis.segmentation.boxes),
+                                   "Composantes retenues avant validation",
+                                   "Composantes extraites avant échec de validation")
         return
 
     engines = result["engines"]
@@ -58,10 +65,12 @@ def show_analysis(result: dict, reference: str = "") -> None:
             if primary.get("error"):
                 st.header("Lecture indisponible")
                 st.warning(f"{primary_name} : {primary['error']}")
+                if primary_name == "EasyOCR":
+                    st.caption("Installez requirements-ocr.txt et les poids vérifiés avant l'analyse.")
             else:
                 text = primary.get("text") or ""
                 st.header(text or "Aucun texte")
-                st.caption("Lecture expérimentale. Les scores affichés ne sont pas calibrés comme probabilités de lecture correcte.")
+                st.caption("Lecture proposée · scores bruts non calibrés.")
                 _reference_result(primary_name, text, reference)
                 if reference and text != reference:
                     differences = [
@@ -74,27 +83,28 @@ def show_analysis(result: dict, reference: str = "") -> None:
                     st.dataframe(differences, hide_index=True,
                                  alt="Positions différentes entre lecture et référence")
 
-    left, right = st.columns([1.1, 0.9], gap="large")
+    left, right = st.columns(2, gap="medium")
     with left:
         with st.container(border=True):
             st.subheader("Plaque extraite")
             if analysis.candidate is not None:
-                st.image(analysis.candidate.crop, caption="Détection brute",
-                         alt="Région brute trouvée par le détecteur", width="stretch")
-            st.image(analysis.plate, caption="Recadrage utilisé pour la segmentation",
-                     alt="Région de plaque analysée", width="stretch")
+                _bounded_image(analysis.candidate.crop, "Détection brute",
+                               "Région brute trouvée par le détecteur", max_width=300)
+            _bounded_image(analysis.plate, "Recadrage analysé",
+                           "Région de plaque analysée", max_width=360)
             if analysis.candidate is not None:
-                st.image(draw_candidate(image, analysis.candidate),
-                         caption="Région candidate dans la photographie",
-                         alt="Quadrilatère de la région candidate", width="stretch")
+                with st.expander("Localisation dans la photographie"):
+                    _bounded_image(draw_candidate(image, analysis.candidate),
+                                   "Région candidate", "Quadrilatère de la plaque détectée",
+                                   max_width=520, scale=1)
     with right:
         with st.container(border=True):
             st.subheader("Caractères segmentés")
             seg = analysis.segmentation
-            st.image(draw_boxes(analysis.plate, seg.boxes),
-                     caption=f"{len(seg.boxes)} composantes · polarité {seg.polarity}",
-                     alt="Boîtes des caractères extraits", width="stretch")
-            st.image(seg.characters, width=55, clamp=True,
+            _bounded_image(draw_boxes(analysis.plate, seg.boxes),
+                           f"{len(seg.boxes)} composantes · polarité {seg.polarity}",
+                           "Boîtes des caractères extraits", max_width=360)
+            st.image(seg.characters, width=44, clamp=True,
                      alt=[f"Caractère extrait {i+1}" for i in range(len(seg.characters))])
 
     for name in ("CNN V2", "CNN V3.1"):
@@ -103,47 +113,50 @@ def show_analysis(result: dict, reference: str = "") -> None:
             _cnn_details(name, item["predictions"])
 
     if len(engines) > 1 or result["view_mode"] == "Comparaison":
-        with st.container(border=True):
-            st.subheader("Comparaison des méthodes de reconnaissance")
-            st.caption("Les trois moteurs utilisent la même région détectée. Chaque CNN reçoit sa propre préparation ; EasyOCR lit la région brute en gris, ×4 cubique et Otsu.")
+        st.subheader("Comparaison des méthodes de reconnaissance")
+        st.caption("Même plaque extraite, préparations propres à chaque moteur.")
+        with st.expander("Voir les images utilisées pour la comparaison"):
             raw = analysis.raw_plate
             if raw is not None:
                 raw_col, prepared_col = st.columns(2, gap="medium")
                 with raw_col:
-                    st.image(raw, caption="Région brute de plaque",
-                             alt="Recadrage brut détecté", width="stretch")
+                    _bounded_image(raw, "Région brute de plaque", "Recadrage brut détecté",
+                                   max_width=260)
                 with prepared_col:
-                    st.image(prepare_ocr_image(raw),
-                             caption="Image préparée pour EasyOCR · Otsu ×4",
-                             alt="Plaque agrandie et binarisée pour EasyOCR", width="stretch")
-            columns = st.columns(len(engines), gap="medium")
-            for column, (name, item) in zip(columns, engines.items()):
-                with column:
-                    with st.container(border=True):
-                        st.caption(name)
-                        if item.get("error"):
-                            st.warning(item["error"])
-                        else:
-                            text = item.get("text") or ""
-                            st.metric(name, text or "Aucun texte")
-                            if item.get("elapsed_ms") is not None:
-                                st.caption(f"Exécution mesurée : {item['elapsed_ms']:.2f} ms (chargement inclus au premier appel)")
-                            if name == "EasyOCR":
-                                ocr = item["ocr"]
-                                if ocr["score"] is not None:
-                                    st.metric("Score brut EasyOCR", f"{ocr['score']:.4f}")
-                                elif ocr["scores"]:
-                                    st.caption("Scores bruts par fragment : " + ", ".join(
-                                        f"{score:.4f}" for score in ocr["scores"]))
-                            _reference_result(name, text, reference)
-            texts = [(name, item.get("text")) for name, item in engines.items()
-                     if not item.get("error") and item.get("text")]
-            if len(texts) >= 2:
-                if len({text for _, text in texts}) == 1:
-                    st.info("Les moteurs exécutés concordent ; sans référence, cela ne confirme pas l'exactitude.")
+                    _bounded_image(prepare_ocr_image(raw),
+                                   "Préparation EasyOCR · Otsu ×4",
+                                   "Plaque agrandie et binarisée pour EasyOCR", max_width=260,
+                                   scale=1)
+        columns = st.columns(len(engines), gap="medium")
+        for column, (name, item) in zip(columns, engines.items()):
+            with column, st.container(border=True, height="stretch"):
+                if item.get("error"):
+                    st.metric(name, "Indisponible")
+                    if name == "EasyOCR":
+                        st.caption("Installer requirements-ocr.txt et les poids vérifiés.")
+                    else:
+                        st.warning(item["error"])
                 else:
-                    st.info("Les moteurs divergent ; aucune lecture n'est choisie automatiquement.")
-            st.caption("Les scores softmax et EasyOCR sont des scores bruts, non des probabilités calibrées de réussite.")
+                    text = item.get("text") or ""
+                    st.metric(name, text or "Aucun texte")
+                    if item.get("elapsed_ms") is not None:
+                        st.caption(f"Exécution : {item['elapsed_ms']:.2f} ms")
+                    if name == "EasyOCR":
+                        ocr = item["ocr"]
+                        if ocr["score"] is not None:
+                            st.metric("Score brut EasyOCR", f"{ocr['score']:.4f}")
+                        elif ocr["scores"]:
+                            st.caption("Scores bruts par fragment : " + ", ".join(
+                                f"{score:.4f}" for score in ocr["scores"]))
+                    _reference_result(name, text, reference)
+        texts = [(name, item.get("text")) for name, item in engines.items()
+                 if not item.get("error") and item.get("text")]
+        if len(texts) >= 2:
+            if len({text for _, text in texts}) == 1:
+                st.info("Les moteurs exécutés concordent ; sans référence, cela ne confirme pas l'exactitude.")
+            else:
+                st.info("Les moteurs divergent ; aucune lecture n'est choisie automatiquement.")
+        st.caption("Scores CNN et EasyOCR bruts, sans probabilité calibrée de réussite.")
 
     v2, v31 = engines.get("CNN V2", {}), engines.get("CNN V3.1", {})
     if v2.get("predictions") and v31.get("predictions"):
